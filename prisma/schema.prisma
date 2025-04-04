@@ -1,0 +1,38 @@
+// スキーマの定義
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ユーザーモデル
+model User {
+  id        Int      @id @default(autoincrement())
+  cognitoId String   @unique @map("cognito_id")
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  files     File[]
+
+  @@map("users")
+  @@schema("app")
+}
+
+// ファイルモデル
+model File {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  fileName    String   @map("file_name")
+  fileKey     String   @map("file_key")
+  contentType String?  @map("content_type")
+  size        Int?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("files")
+  @@schema("app")
+}

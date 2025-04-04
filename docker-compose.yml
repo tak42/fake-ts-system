@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - RDS相当
+  postgres:
+    image: postgres:14
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=myapp
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO - S3相当
+  minio:
+    image: minio/minio
+    ports:
+      - '9000:9000' # S3 API エンドポイント
+      - '9001:9001' # Web コンソール
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - ./data/minio:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # MinIO クライアント - バケット初期化用
+  minio-client:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      /usr/bin/mc config host add myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/my-app-bucket;
+      /usr/bin/mc policy set public myminio/my-app-bucket;
+      exit 0;
+      "
+
+  # LocalStack - Cognitoエミュレーション
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - '4566:4566'
+    environment:
+      - SERVICES=cognito
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+    volumes:
+      - ./data/localstack:/tmp/localstack
+      - ./docker/localstack/init-scripts:/docker-entrypoint-initaws.d
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:4566/_localstack/health']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # pgAdmin (オプション) - PostgreSQL管理用GUI
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - '5050:80'
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    depends_on:
+      - postgres
+
+  # Prisma Studio (オプション)
+  prisma-studio:
+    image: timothyjmiller/prisma-studio:latest
+    ports:
+      - '5555:5555'
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/myapp?schema=app
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:

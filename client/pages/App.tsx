@@ -1,30 +1,31 @@
 import React, { useState } from 'react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
+import Login from '../components/Login';
 import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0);
+  const [user, setUser] = useState<string | null>(null);
+
+  // ログイン成功時のコールバック
+  const handleLoginSuccess = (username: string) => {
+    setUser(username);
+    console.log(`${username}がログインしました`);
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>count is {count}</button>
-        <p>
-          Edit <code>client/pages/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">Click on the Vite and React logos to learn more</p>
-    </>
+    <div className="app-container">
+      <header className="app-header">
+        <h1>Amplify認証デモ</h1>
+        {user && <p className="welcome-message">ようこそ、{user}さん</p>}
+      </header>
+
+      <main className="app-content">
+        <Login onLoginSuccess={handleLoginSuccess} />
+      </main>
+
+      <footer className="app-footer">
+        <p>LocalStackを使用したAWS Cognito認証デモ</p>
+      </footer>
+    </div>
   );
 }
 
